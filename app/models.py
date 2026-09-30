@@ -6,4 +6,5 @@ class Document(Base):
 
     id = Column(Integer, primary_key=True)
     filename = Column(String, nullable=False)
-
+    file_path = Column(String, nullable=False)
+    
