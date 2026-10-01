@@ -7,6 +7,14 @@ import shutil
 import os
 from app.aws import s3_client, BUCKET_NAME
 
+import redis
+
+redis_client = redis.Redis(
+    host='localhost',
+    port=6379,
+    decode_responses=True  # Automatically decode byte responses to strings
+)
+
 app = FastAPI()
 
 @app.get("/health")
@@ -32,6 +40,7 @@ def upload_document(file: UploadFile =File(...),
     s3_client.upload_fileobj(file.file, 
                              BUCKET_NAME, 
                              file.filename)
+    redis_client.lpush('document_queue', file.filename)
     new_document = Document(
     filename=file.filename,
     file_path=file.filename
@@ -60,8 +69,8 @@ def delete_document(document_id: int, db: Session = Depends(get_db)):
     document = db.query(Document).filter(Document.id == document_id).first()
     if document is None:
         raise HTTPException(status_code=404, detail="Document not found")
-    if os.path.exists(document.file_path):
-        os.remove(document.file_path)
+    s3_client.delete_object(Bucket=BUCKET_NAME, Key=document.file_path)
+
     db.delete(document)
     db.commit()
     return {"message": "Document deleted successfully"}
