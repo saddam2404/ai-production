@@ -40,7 +40,7 @@ def upload_document(file: UploadFile =File(...),
     s3_client.upload_fileobj(file.file, 
                              BUCKET_NAME, 
                              file.filename)
-    redis_client.lpush('document_queue', file.filename)
+ 
     new_document = Document(
     filename=file.filename,
     file_path=file.filename
@@ -49,6 +49,8 @@ def upload_document(file: UploadFile =File(...),
     db.add(new_document)
     db.commit()
     db.refresh(new_document)
+    redis_client.lpush('document_queue', file.filename)
+
 
 
     return{
